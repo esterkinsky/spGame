@@ -7,35 +7,51 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
-    <div id="modal">
-        <div class="start-game">
-            <button class="start button">Начать игру</button>
-            <button class="button result-button">Результаты</button>
-        </div>
-        <div class="end-game">
-            <div>
-                <h2>Поздравляем</h2>
-                <p></p>
+    <div class="app">
+        <div id="modal">
+            <div class="start-game">    
+                <button class="start button">Начать игру</button>
+                <button class="button result-button">Результаты</button>
             </div>
-            <button class="start button">Начать заного</button>
-            <button class="button result-button">Результаты</button>
+            <div class="end-game">
+                <div>
+                    <h2>Поздравляем</h2>
+                    <p></p>
+                </div>
+                <button class="start button">Начать заного</button>
+                <button class="button to-main-button">На главную</button>
+                <button class="button result-button">Результаты</button>
+            </div>
+            <div class="info">
+                <div class="results"></div>
+                <button class="button to-main-button">На главную</button>
+            </div>
         </div>
-        <div class="info">
-            <div class="results"></div>
-            <button class="button to-main-button">На главную</button>
+        <div class="game">
+            <div>
+                <div id="timer"></div>
+                <div id="move-counter"></div>
+            </div>
+            <div>
+                <h1>Дороги зверей</h1>
+                <div id="game-board"></div>
+            </div>
+            <div>
+                <button class="button start">Заного</button>
+                <button class="button to-main-button">На главную</button>
+            </div>
         </div>
     </div>
-    <div class="game">
-        <div>
-            <div id="timer"></div>
-            <div id="move-counter"></div>
-        </div>
-        <div>
-            <h1>Дороги зверей</h1>
-            <div id="game-board"></div>
-        </div>
-        <button class="button start">Заного</button>
+    <div class="overlay-control">
+        <button id="full-screen-button">
+            <img src="assets/screen_size.png">
+        </button>
+        <button id="toggle-audio-button">
+            <img src="assets/volume.png">
+        </button>
     </div>
+    <audio id="music" src="assets/music.mp3" loop></audio>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="index.js"></script>
 </body>
 </html>

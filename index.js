@@ -1,9 +1,13 @@
 const cellSize = 75;
+const endGameDuration = 3000;
 const board = document.getElementById('game-board');
 const modalWindowBlock =  document.getElementById('modal');
 const gameBlock = document.querySelector('.game');
 const timerBlock = document.getElementById('timer');
 const moveCounterBlock = document.getElementById('move-counter');
+const toggleAudioButton = document.getElementById('toggle-audio-button');
+const music = document.getElementById('music');
+const musicIcon = document.querySelector('#toggle-audio-button img');
 
 let time = 0;
 let movesCount = 0;
@@ -14,6 +18,7 @@ let currentColor = '';
 let paths = {};
 let canvas = null;
 let ctx = null;
+let isAudioPlaying = true;
 
 const fixedAnimals = [
     { index: 0, value: 1, color: 'red' },
@@ -76,6 +81,7 @@ function isNeighboringCell(cellIndex1, cellIndex2) {
 
 function renderModal(modalType) {
     modalWindowBlock.style.display = 'flex';
+    modalWindowBlock.classList.add('show'); // Добавляем класс для плавного появления
     document.querySelectorAll('#modal > div').forEach(modal => { 
         if (modal.classList.contains(modalType)) {
             modal.style.display = 'flex';
@@ -83,6 +89,13 @@ function renderModal(modalType) {
             modal.style.display = 'none';
         }
     });
+}
+
+function hideModal() {
+    modalWindowBlock.classList.remove('show'); // Убираем класс для скрытия
+    setTimeout(() => {
+        modalWindowBlock.style.display = 'none'; // Через 300 мс полностью скрываем
+    }, 300);
 }
 
 function renderAllResults() {
@@ -130,10 +143,31 @@ function renderAllResults() {
     resultsContainer.appendChild(table);
 }
 
+function launchFireworks() {
+    const end = Date.now() + endGameDuration;
+
+    (function frame() {
+        confetti({
+            particleCount: 5,
+            angle: Math.random() * 360,
+            spread: 60,
+            startVelocity: 30,
+            origin: {
+                x: Math.random(),
+                y: Math.random() - 0.2,
+            }
+        });
+
+        if (Date.now() < end) {
+            requestAnimationFrame(frame);
+        }
+    })();
+}
 
 function endGame() {
     clearInterval(timerInterval);
     saveResult(time, movesCount);
+    launchFireworks();
     document.querySelector('.end-game p').innerHTML = `Вы закончили игру за ${formatTime(time)} и потратили ${movesCount} ходов`;
     renderAllResults();
     renderModal('end-game');
@@ -346,22 +380,45 @@ function startGame() {
     updateMoveCounterContent();
 
     gameBlock.style.display = 'flex';
-    modalWindowBlock.style.display = 'none';
+    hideModal();
     timerInterval = setInterval(() => {
         time++;
         updateTimeContent();
     }, 1000);
 }
 
+function toggleAudio() {
+    if (isAudioPlaying) {
+        music.pause();
+        musicIcon.src = 'assets/mute.png';
+        isAudioPlaying = false;
+    } else {
+        music.play()
+        musicIcon.src = 'assets/volume.png';
+        isAudioPlaying = true;
+    }
+}
+
 window.addEventListener('load', () => {
     Object.values(document.querySelectorAll('.start')).forEach(button => button.addEventListener('click', startGame));
     Object.values(document.querySelectorAll('.result-button')).forEach(button => button.addEventListener('click', () => renderModal('info')));
-    document.querySelector('.to-main-button').addEventListener('click', () => {
+    Object.values(document.querySelectorAll('.to-main-button')).forEach(button => button.addEventListener('click', () =>{
         renderModal('start-game')
         gameBlock.style.display = 'none';
-    });
+    }));    
     generateUserName();
     renderAllResults();
     renderModal('start-game');
+    
+    document.getElementById('full-screen-button').addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    });
+    
+    document.body.addEventListener('click', () => music.play(), { once: true });
+    toggleAudioButton.addEventListener('click', toggleAudio);
 });
 

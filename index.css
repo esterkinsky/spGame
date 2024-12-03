@@ -4,6 +4,30 @@
     box-sizing: border-box;
 }
 
+.app {
+    position: relative;
+    height: 100%;
+    width: 100%;
+}
+
+.overlay-control {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    z-index: 5;
+}
+
+.overlay-control > button {
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+}
+
+.overlay-control > button img {
+    width: 30px;
+    height: 30px;    
+}
+
 body {
     font-family: Arial, sans-serif;
     text-align: center;
@@ -40,7 +64,7 @@ h1 {
 }
 
 #modal {
-    display: none;
+    display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
@@ -49,6 +73,15 @@ h1 {
     width: 100vw;
     background-color: #b0a0a0aa;
     z-index: 4;
+    transition: all 0.3s ease-in-out;
+    opacity: 0;
+}
+
+#modal.show {
+    opacity: 1;
+    animation: modal-appear 0.3s ease forwards;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transform: scale(0.8);
 }
 
 #modal > button {
@@ -102,4 +135,15 @@ canvas {
 .results-table tr.highlight {
     background-color: #ffeb3b;
     font-weight: bold;
+}
+
+@keyframes modal-appear {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
