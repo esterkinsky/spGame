@@ -1,5 +1,5 @@
 const cellSize = 75;
-const endGameDuration = 3000;
+const endGameDuration = 1500;
 const board = document.getElementById('game-board');
 const modalWindowBlock =  document.getElementById('modal');
 const gameBlock = document.querySelector('.game');
@@ -8,6 +8,7 @@ const moveCounterBlock = document.getElementById('move-counter');
 const toggleAudioButton = document.getElementById('toggle-audio-button');
 const music = document.getElementById('music');
 const musicIcon = document.querySelector('#toggle-audio-button img');
+const levelsBlock = document.querySelector('.levels');
 
 let time = 0;
 let movesCount = 0;
@@ -19,14 +20,31 @@ let paths = {};
 let canvas = null;
 let ctx = null;
 let isAudioPlaying = true;
+let currentLevel = 0;
 
-const fixedAnimals = [
-    { index: 0, value: 1, color: 'red' },
-    { index: 4, value: 1, color: 'red' },
-    { index: 6, value: 2, color: 'blue' },
-    { index: 10, value: 2, color: 'blue' },
-    { index: 12, value: 3, color: 'green' },
-    { index: 14, value: 3, color: 'green' }
+const gameLevels = [
+    {
+        gridSize: 5,
+        fixedAnimals: [
+            { index: 0, value: 1, color: 'red' },
+            { index: 4, value: 1, color: 'red' },
+            { index: 6, value: 2, color: 'blue' },
+            { index: 10, value: 2, color: 'blue' },
+            { index: 12, value: 3, color: 'green' },
+            { index: 14, value: 3, color: 'green' }
+        ]
+    },
+    {
+        gridSize: 5,
+        fixedAnimals: [
+            { index: 0, value: 1, color: 'red' },
+            { index: 5, value: 1, color: 'red' },
+            { index: 10, value: 2, color: 'blue' },
+            { index: 15, value: 2, color: 'blue' },
+            { index: 20, value: 3, color: 'green' },
+            { index: 24, value: 3, color: 'green' },
+        ]
+    },
 ];
 
 const STORAGE_KEY = 'gameResults';
@@ -34,12 +52,29 @@ let userName;
 
 function generateUserName() {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    const lastId = Object.keys(results).length;
+    const lastId = results[currentLevel] ? Object.keys(results[currentLevel]).length : 0;
+
     userName = `user${lastId + 1}`;
+    if (lastId === 0) {
+        gameLevels.forEach((_, index) => {
+            results[index] = {
+                [userName]: {
+                    time: null, 
+                    moves: null,
+                },
+            }
+        });
+    } else {
+        gameLevels.forEach((_, index) => {
+            results[index][userName] = { time: null, moves: null };
+        })
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
 }
 
 function getBestResult(user) {
-    const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    const results = JSON.parse(localStorage.getItem(STORAGE_KEY))[currentLevel] || {};
     return results[user] || { time: Infinity, moves: Infinity };
 }
 
@@ -47,8 +82,8 @@ function saveResult(time, moves) {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     const bestResult = getBestResult(userName);
 
-    if (time < bestResult.time) {
-        results[userName] = { time, moves };
+    if (bestResult.time === null || time < bestResult.time) {
+        results[currentLevel][userName] = { time, moves };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
     }
 }
@@ -102,7 +137,9 @@ function renderAllResults() {
     const resultsContainer = document.querySelector('.results');
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     
-    const sortedResults = Object.entries(results).sort(([, a], [, b]) => {
+    const sortedResults = Object.entries(results[currentLevel]).sort(([, a], [, b]) => {
+        if (a.time === null) return 1;
+        if (b.time === null) return -1;
         if (a.time !== b.time) return a.time - b.time;
         return a.moves - b.moves;
     });
@@ -133,8 +170,47 @@ function renderAllResults() {
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>${user}</td>
-            <td>${formatTime(time)}</td>
-            <td>${moves}</td>
+            <td>${time ? formatTime(time) : '-'}</td>
+            <td>${moves ? moves : '-'}</td>
+        `;
+
+        table.appendChild(row);
+    });
+
+    resultsContainer.appendChild(table);
+}
+
+function renderUserResults() {
+    const resultsContainer = document.querySelector('.results');
+    const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+    const userResults = Object.entries(results)
+        .filter(([_, levelResults]) => levelResults[userName])
+        .map(([levelIndex, levelResults]) => ({
+            level: levelIndex,
+            ...levelResults[userName],
+        }));
+    
+    resultsContainer.innerHTML = '';
+
+    const table = document.createElement('table');
+    table.classList.add('results-table');
+
+    table.innerHTML = `
+        <tr>
+            <th>Уровень</th>
+            <th>Ходы</th>
+            <th>Время</th>
+        </tr>
+    `;
+
+    userResults.forEach(({ level, moves, time }) => {
+        const row = document.createElement('tr');
+
+        row.innerHTML = `
+            <td>${Number(level) + 1}</td>
+            <td>${moves ? moves : '-'}</td>
+            <td>${time ? formatTime(time) : '-'}</td>
         `;
 
         table.appendChild(row);
@@ -371,7 +447,10 @@ function drawCircle(cellIndex, color) {
     ctx.fill();
 }
 
-function startGame() {
+function startLevel(index) {
+    currentLevel = index;
+    fixedAnimals = gameLevels[index].fixedAnimals;
+    gridSize = gameLevels[index].gridSize
     createBoard(gridSize);
     time = 0;
     movesCount = 0;
@@ -387,6 +466,17 @@ function startGame() {
     }, 1000);
 }
 
+function renderLevelButtons() {
+    levelsBlock.innerHTML = '';
+    gameLevels.forEach((_, index) => {
+        const button = document.createElement('button');
+        button.textContent = `Уровень ${index + 1}`;
+        button.classList.add('level-button');
+        button.addEventListener('click', () => startLevel(index));
+        levelsBlock.appendChild(button);
+    });
+}
+
 function toggleAudio() {
     if (isAudioPlaying) {
         music.pause();
@@ -400,15 +490,22 @@ function toggleAudio() {
 }
 
 window.addEventListener('load', () => {
-    Object.values(document.querySelectorAll('.start')).forEach(button => button.addEventListener('click', startGame));
-    Object.values(document.querySelectorAll('.result-button')).forEach(button => button.addEventListener('click', () => renderModal('info')));
+    Object.values(document.querySelectorAll('.start')).forEach(button => button.addEventListener('click', () => startLevel(currentLevel)));
+    Object.values(document.querySelectorAll('.result-button')).forEach(button => button.addEventListener('click', () => {
+        renderAllResults();
+        renderModal('info')
+    }));
     Object.values(document.querySelectorAll('.to-main-button')).forEach(button => button.addEventListener('click', () =>{
-        renderModal('start-game')
+        renderModal('pick-level')
         gameBlock.style.display = 'none';
     }));    
+    document.querySelector('.my-result-button').addEventListener('click', () => {
+        renderUserResults();
+        renderModal('info');
+    });
     generateUserName();
-    renderAllResults();
     renderModal('start-game');
+    renderLevelButtons();
     
     document.getElementById('full-screen-button').addEventListener('click', () => {
         if (!document.fullscreenElement) {
