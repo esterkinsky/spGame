@@ -271,6 +271,14 @@ function createBoard(size) {
     board.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
     board.style.gridTemplateRows = `repeat(${size}, ${cellSize}px)`;
 
+    board.addEventListener('touchstart', startPath);
+    board.addEventListener('touchmove', (e) => {
+        const { clientX, clientY } = e.changedTouches[0];
+        const el = document.elementFromPoint(clientX,clientY);
+        drawPath(el)
+    })
+    board.addEventListener('touchend', endPath)
+
     // Инициализация возможных путей
     paths = fixedAnimals.reduce((acc, { color }) => {
         return {
@@ -295,7 +303,7 @@ function createBoard(size) {
         }
 
         cell.addEventListener('mousedown', startPath);
-        cell.addEventListener('mouseenter', drawPath);
+        cell.addEventListener('mouseenter', (e) => drawPath(e.target));
         cell.addEventListener('mouseup', endPath);
         board.appendChild(cell);
     }
@@ -311,6 +319,7 @@ function createBoard(size) {
 }
 
 function startPath(e) {
+    console.log(e.target)
     const cellIndex = parseInt(e.target.getAttribute('data-index'));
     const animal = fixedAnimals.find(({ index }) => index === cellIndex );
 
@@ -349,10 +358,10 @@ function clearPath() {
     }
 }
 
-function drawPath(e) {
+function drawPath(target) {
     if (!isDrawing) return;
 
-    const cellIndex = parseInt(e.target.getAttribute('data-index'));
+    const cellIndex = parseInt(target.getAttribute('data-index'));
     const preLastPathIndex = paths[currentColor].slice(-2, -1)[0]; 
 
     // Не рисуем если индекс клетки уже есть в каком-то пути
