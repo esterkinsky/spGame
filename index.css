@@ -5,9 +5,10 @@
 }
 
 .app {
+    box-sizing: content-box;
     position: relative;
-    height: 100%;
-    width: 100%;
+    height: 100vh;
+    width: 100vw;
 }
 
 .overlay-control {
@@ -31,7 +32,6 @@
 body {
     font-family: Arial, sans-serif;
     text-align: center;
-    overflow: hidden;
 }
 
 h1 {
@@ -49,7 +49,6 @@ h1 {
     width: 100%;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 20px;
 }
 
 .cell {
@@ -135,6 +134,29 @@ canvas {
 .results-table tr.highlight {
     background-color: #ffeb3b;
     font-weight: bold;
+}
+
+.levels {
+    padding: 20px 0 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.level-button {
+    cursor: pointer;
+    background-color: #fff;
+    padding: 5px 0;
+    border-radius: 5px;
+}
+
+.level-button:hover {
+    background-color: gray;
+}
+
+.disabled-button {
+    pointer-events: none;
+    background-color: darkgray;
 }
 
 @keyframes modal-appear {

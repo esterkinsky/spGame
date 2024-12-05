@@ -1,4 +1,5 @@
-const cellSize = 75;
+const size = window.innerWidth / 8;
+const cellSize = size > 75 ? 75 : size;
 const endGameDuration = 1500;
 const board = document.getElementById('game-board');
 const modalWindowBlock =  document.getElementById('modal');
@@ -246,6 +247,7 @@ function endGame() {
     launchFireworks();
     document.querySelector('.end-game p').innerHTML = `Вы закончили игру за ${formatTime(time)} и потратили ${movesCount} ходов`;
     renderAllResults();
+    renderLevelButtons();
     renderModal('end-game');
 }
 
@@ -319,7 +321,6 @@ function createBoard(size) {
 }
 
 function startPath(e) {
-    console.log(e.target)
     const cellIndex = parseInt(e.target.getAttribute('data-index'));
     const animal = fixedAnimals.find(({ index }) => index === cellIndex );
 
@@ -479,8 +480,12 @@ function renderLevelButtons() {
     levelsBlock.innerHTML = '';
     gameLevels.forEach((_, index) => {
         const button = document.createElement('button');
-        button.textContent = `Уровень ${index + 1}`;
+        button.textContent = index + 1;
         button.classList.add('level-button');
+        const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        if (index > 0 && results[index-1][userName].time === null) {
+            button.classList.add('disabled-button');
+        }
         button.addEventListener('click', () => startLevel(index));
         levelsBlock.appendChild(button);
     });
