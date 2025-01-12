@@ -7,42 +7,53 @@
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
-    <div class="app">
-        <div id="modal">
-            <div class="start-game">    
-                <button class="start button">Начать игру</button>
-            </div>
-            <div class="end-game">
-                <div>
-                    <h2>Поздравляем</h2>
-                    <p></p>
-                </div>
-                <button class="start button">Начать заного</button>
-                <button class="button to-main-button">На главную</button>
-                <button class="button result-button">Таблица результатов</button>
-            </div>
-            <div class="info">
-                <div class="results"></div>
-                <button class="button to-main-button">На главную</button>
-            </div>
-            <div class="pick-level">
-                <h2>Выбрерите уровень</h2>
-                <div class="levels"></div>
-                <button class="button my-result-button">Мои результаты</button>
-            </div>
+    <div id="modal">
+        <div class="start-game">    
+            <button class="start button">Начать игру</button>
         </div>
+        <div class="end-level">
+            <div>
+                <h2>Поздравляем</h2>
+                <p></p>
+            </div>
+            <button class="next-level button">Следующий уровень</button>
+            <button class="start button">Начать прохождение заного</button>
+            <button class="button to-main-button">На главную</button>
+        </div>
+        <div class="end-game">
+            <div>
+                <h2>Поздравляем</h2>
+                <p></p>
+            </div>
+            <button class="button result-button">Смотреть таблицу результатов</button>
+            <button class="start button">Начать прохождение заного</button>
+            <button class="button to-main-button">На главную</button>
+        </div>
+        <div class="info">
+            <div class="results"></div>
+            <button class="button to-main-button">На главную</button>
+        </div>
+        <div class="lobby">
+            <button class="start button">Начать игру</button>
+            <button class="button result-button">Таблица результатов</button>
+        </div>
+    </div>
+    <div class="app">
         <div class="game">
-            <div>
-                <div id="timer"></div>
-                <div id="move-counter"></div>
-            </div>
-            <div>
+            <div class='game-header'>
+                <div class="header-control">
+                    <div id="level-counter"></div>
+                    <div id="timer"></div>
+                    <div id="move-counter"></div>
+                </div>
                 <h1>Дороги зверей</h1>
-                <div id="game-board"></div>
+                <div class="header-control">
+                    <button class="button restart">Заного</button>
+                    <button class="button to-main-button">На главную</button>
+                </div>
             </div>
-            <div>
-                <button class="button start">Заного</button>
-                <button class="button to-main-button">На главную</button>
+            <div class="main">
+                <div id="game-board"></div>
             </div>
         </div>
     </div>

@@ -6,85 +6,75 @@ const modalWindowBlock =  document.getElementById('modal');
 const gameBlock = document.querySelector('.game');
 const timerBlock = document.getElementById('timer');
 const moveCounterBlock = document.getElementById('move-counter');
+const levelCounterBlock = document.getElementById('level-counter');
 const toggleAudioButton = document.getElementById('toggle-audio-button');
 const music = document.getElementById('music');
 const musicIcon = document.querySelector('#toggle-audio-button img');
-const levelsBlock = document.querySelector('.levels');
 
 let time = 0;
 let movesCount = 0;
 let timerInterval = null;
 let isDrawing = false;
-let gridSize = 5;
 let currentColor = '';
 let paths = {};
 let canvas = null;
 let ctx = null;
 let isAudioPlaying = true;
-let currentLevel = 0;
+let currentLevel = 1;
+let fixedAnimals = {};
 
-const gameLevels = [
-    {
-        gridSize: 5,
-        fixedAnimals: [
-            { index: 0, value: 1, color: 'red' },
-            { index: 4, value: 1, color: 'red' },
-            { index: 6, value: 2, color: 'blue' },
-            { index: 10, value: 2, color: 'blue' },
-            { index: 12, value: 3, color: 'green' },
-            { index: 14, value: 3, color: 'green' }
-        ]
-    },
-    {
-        gridSize: 5,
-        fixedAnimals: [
-            { index: 0, value: 1, color: 'red' },
-            { index: 5, value: 1, color: 'red' },
-            { index: 10, value: 2, color: 'blue' },
-            { index: 15, value: 2, color: 'blue' },
-            { index: 20, value: 3, color: 'green' },
-            { index: 24, value: 3, color: 'green' },
-        ]
-    },
-];
+const animalCount = 3;
+const levelCount = 10;
+const gridSize = 6;
 
 const STORAGE_KEY = 'gameResults';
 let userName;
 
+const animal1 = new Image();
+animal1.src = '/assets/белка.png';
+const animal2 = new Image();
+animal2.src = '/assets/заяц.jpg';
+const animal3 = new Image();
+animal3.src = '/assets/дятел.jpg';
+
+const house1 = new Image();
+house1.src = '/assets/дупло.jpg';
+const house2 = new Image();
+house2.src = '/assets/нора.png';
+const house3 = new Image();
+house3.src = '/assets/гнездо.jpg';
+
+function clearGameInfo () {
+    time = 0;
+    movesCount = 0;
+    currentLevel = 1;
+}
+
 function generateUserName() {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    const lastId = results[currentLevel] ? Object.keys(results[currentLevel]).length : 0;
-
+    const lastId = Object.keys(results).length
     userName = `user${lastId + 1}`;
-    if (lastId === 0) {
-        gameLevels.forEach((_, index) => {
-            results[index] = {
-                [userName]: {
-                    time: null, 
-                    moves: null,
-                },
-            }
-        });
-    } else {
-        gameLevels.forEach((_, index) => {
-            results[index][userName] = { time: null, moves: null };
-        })
+    results[userName] = {
+        time: null,
+        moves: null,
+        levels: null,
     }
-
     localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
 }
 
 function getBestResult(user) {
-    const results = JSON.parse(localStorage.getItem(STORAGE_KEY))[currentLevel] || {};
-    return results[user] || { time: Infinity, moves: Infinity };
+    const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    return results[user] || { time: Infinity, moves: Infinity, levels: Infinity };
 }
 
-function saveResult(time, moves) {
+function saveResult(time, moves, levels) {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     const bestResult = getBestResult(userName);
-
-    if (bestResult.time === null || time < bestResult.time) {
-        results[currentLevel][userName] = { time, moves };
+    if (results[userName].levels < levels) {
+        results[userName] = { time, moves, levels };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+    } else if (bestResult.time === null || time < bestResult.time) {
+        results[userName] = { time, moves, levels };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
     }
 }
@@ -101,6 +91,10 @@ function updateTimeContent() {
 
 function updateMoveCounterContent() {
     moveCounterBlock.textContent = `Количество ходов: ${movesCount}`;
+}
+
+function updateLevelCounterContent() {
+    levelCounterBlock.textContent = `Уровень ${currentLevel}/${levelCount}`;
 }
 
 function isNeighboringCell(cellIndex1, cellIndex2) {
@@ -138,10 +132,18 @@ function renderAllResults() {
     const resultsContainer = document.querySelector('.results');
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     
-    const sortedResults = Object.entries(results[currentLevel]).sort(([, a], [, b]) => {
-        if (a.time === null) return 1;
-        if (b.time === null) return -1;
+    const sortedResults = Object.entries(results).sort(([, a], [, b]) => {
+        // Сначала сортируем по количеству уровней (по убыванию)
+        if (b.levels !== a.levels) {
+            return b.levels - a.levels;
+        }
+        
+        // Затем сортируем по времени (по возрастанию)
+        if (a.time === null && b.time !== null) return 1; // Если у a нет времени, он идет ниже
+        if (b.time === null && a.time !== null) return -1; // Если у b нет времени, он идет ниже
         if (a.time !== b.time) return a.time - b.time;
+    
+        // Наконец, сортируем по количеству ходов (по возрастанию)
         return a.moves - b.moves;
     });
     
@@ -156,11 +158,12 @@ function renderAllResults() {
             <th>Имя</th>
             <th>Время</th>
             <th>Ходы</th>
+            <th>Уровней пройдено</th>
         </tr>
     `;
 
     // Заполняем таблицу результатами
-    sortedResults.forEach(([user, { time, moves }], index) => {
+    sortedResults.forEach(([user, { time, moves, levels }], index) => {
         const row = document.createElement('tr');
         
         // Добавляем класс для выделения текущего пользователя
@@ -173,45 +176,7 @@ function renderAllResults() {
             <td>${user}</td>
             <td>${time ? formatTime(time) : '-'}</td>
             <td>${moves ? moves : '-'}</td>
-        `;
-
-        table.appendChild(row);
-    });
-
-    resultsContainer.appendChild(table);
-}
-
-function renderUserResults() {
-    const resultsContainer = document.querySelector('.results');
-    const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-
-    const userResults = Object.entries(results)
-        .filter(([_, levelResults]) => levelResults[userName])
-        .map(([levelIndex, levelResults]) => ({
-            level: levelIndex,
-            ...levelResults[userName],
-        }));
-    
-    resultsContainer.innerHTML = '';
-
-    const table = document.createElement('table');
-    table.classList.add('results-table');
-
-    table.innerHTML = `
-        <tr>
-            <th>Уровень</th>
-            <th>Ходы</th>
-            <th>Время</th>
-        </tr>
-    `;
-
-    userResults.forEach(({ level, moves, time }) => {
-        const row = document.createElement('tr');
-
-        row.innerHTML = `
-            <td>${Number(level) + 1}</td>
-            <td>${moves ? moves : '-'}</td>
-            <td>${time ? formatTime(time) : '-'}</td>
+            <td>${levels ? levels : '-'}</td>
         `;
 
         table.appendChild(row);
@@ -243,12 +208,16 @@ function launchFireworks() {
 
 function endGame() {
     clearInterval(timerInterval);
-    saveResult(time, movesCount);
+    saveResult(time, movesCount, currentLevel);
     launchFireworks();
-    document.querySelector('.end-game p').innerHTML = `Вы закончили игру за ${formatTime(time)} и потратили ${movesCount} ходов`;
+    const isGameEnd = currentLevel === levelCount;
+    if (isGameEnd) {
+        document.querySelector('.end-game p').innerHTML = `Вы закончили игру за ${formatTime(time)} и потратили ${movesCount} ходов`
+    } else {
+        document.querySelector('.end-level p').innerHTML = `Вы прошли уровень ${currentLevel} из ${levelCount}`
+    }
     renderAllResults();
-    renderLevelButtons();
-    renderModal('end-game');
+    renderModal(isGameEnd ? 'end-game' : 'end-level');
 }
 
 function checkWin() {
@@ -259,10 +228,9 @@ function checkWin() {
         const startCellIndex = path[0];
         const endCellIndex = path[path.length - 1];
 
-        return fixedAnimals.some(animal => 
-            (animal.index === startCellIndex || animal.index === endCellIndex) &&
-            animal.color === color
-        );
+        const filteredFixedAnimals = fixedAnimals.filter(el => el.color === color);
+
+        return filteredFixedAnimals.find(el => el.index === startCellIndex) && filteredFixedAnimals.find(el => el.index === endCellIndex)
     });
 
     isWin && endGame();
@@ -421,6 +389,20 @@ function redrawCanvas() {
         drawCircle(path[0], color);
         drawCircle(path[path.length - 1], color);
     });
+
+    fixedAnimals.forEach(({index, image}) => drawImageInCell(index, image));
+}
+
+function drawImageInCell(index, image) {
+    const imageSize = cellSize - 5;
+    const boardRect = board.getBoundingClientRect();
+    const cell = document.querySelector(`[data-index="${index}"]`).getBoundingClientRect();
+
+    const centerX = cell.left + cell.width / 2 - boardRect.left;
+    const centerY = cell.top + cell.height / 2 - boardRect.top;
+
+    // Рисуем изображение с заданной шириной и высотой
+    ctx.drawImage(image, centerX - imageSize / 2, centerY - imageSize / 2, imageSize, imageSize);
 }
 
 // Рисование линии между двумя индексами ячеек
@@ -457,18 +439,17 @@ function drawCircle(cellIndex, color) {
     ctx.fill();
 }
 
-function startLevel(index) {
-    currentLevel = index;
-    fixedAnimals = gameLevels[index].fixedAnimals;
-    gridSize = gameLevels[index].gridSize
-    createBoard(gridSize);
-    time = 0;
-    movesCount = 0;
+function startLevel() {
     clearInterval(timerInterval);
+    fixedAnimals = generateLevel();
+    createBoard(gridSize);
     updateTimeContent();
     updateMoveCounterContent();
+    updateLevelCounterContent();    
+    redrawCanvas();
 
-    gameBlock.style.display = 'flex';
+    Object.values(document.querySelectorAll('.header-control')).forEach((coontrol) => coontrol.style.display = 'block');
+
     hideModal();
     timerInterval = setInterval(() => {
         time++;
@@ -476,19 +457,18 @@ function startLevel(index) {
     }, 1000);
 }
 
-function renderLevelButtons() {
-    levelsBlock.innerHTML = '';
-    gameLevels.forEach((_, index) => {
-        const button = document.createElement('button');
-        button.textContent = index + 1;
-        button.classList.add('level-button');
-        const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        if (index > 0 && results[index-1][userName].time === null) {
-            button.classList.add('disabled-button');
-        }
-        button.addEventListener('click', () => startLevel(index));
-        levelsBlock.appendChild(button);
-    });
+function restartLevel() {
+    clearInterval(timerInterval);
+    movesCount++;
+    fixedAnimals = generateLevel();
+    createBoard(gridSize);
+    updateTimeContent();
+    updateMoveCounterContent();
+    updateLevelCounterContent();
+    timerInterval = setInterval(() => {
+        time++;
+        updateTimeContent();
+    }, 1000);
 }
 
 function toggleAudio() {
@@ -503,23 +483,68 @@ function toggleAudio() {
     }
 }
 
+// функция для генерации индексов
+function shuffle () {
+    const matrix = Array.from({ length: gridSize }, (_, row) => 
+        Array.from({ length: gridSize }, (_, col) => row * gridSize + col)
+    );
+
+    // Извлекаем внутренние элементы
+    const array = [];
+    for (let i = 1; i < gridSize - 1; i++) {
+        for (let j = 1; j < gridSize - 1; j++) {
+            array.push(matrix[i][j]);
+        }
+    }
+
+    var i = 0
+      , j = 0
+      , temp = null
+  
+    for (i = array.length - 1; i > 0; i -= 1) {
+      j = Math.floor(Math.random() * (i + 1))
+      temp = array[i]
+      array[i] = array[j]
+      array[j] = temp
+    }
+
+    return array;
+}
+
+function generateLevel () {
+    const indexes = shuffle();
+
+    return [
+        { index: indexes[0], value: 1, color: 'red', image: animal1 },
+        { index: indexes[1], value: 1, color: 'red', image: house1 },
+        { index: indexes[2], value: 2, color: 'blue', image: animal2 },
+        { index: indexes[3], value: 2, color: 'blue', image: house2 },
+        { index: indexes[4], value: 3, color: 'green', image: animal3 },
+        { index: indexes[5], value: 3, color: 'green', image: house3 }
+    ]
+}
+
 window.addEventListener('load', () => {
-    Object.values(document.querySelectorAll('.start')).forEach(button => button.addEventListener('click', () => startLevel(currentLevel)));
+    Object.values(document.querySelectorAll('.start')).forEach(button => button.addEventListener('click', () => {
+        clearGameInfo();
+        startLevel();
+    }));
     Object.values(document.querySelectorAll('.result-button')).forEach(button => button.addEventListener('click', () => {
         renderAllResults();
         renderModal('info')
     }));
     Object.values(document.querySelectorAll('.to-main-button')).forEach(button => button.addEventListener('click', () =>{
-        renderModal('pick-level')
-        gameBlock.style.display = 'none';
+        Object.values(document.querySelectorAll('.header-control')).forEach((coontrol) => coontrol.style.display = 'none');
+        board.innerHTML = '';
+        renderModal('lobby');
     }));    
-    document.querySelector('.my-result-button').addEventListener('click', () => {
-        renderUserResults();
-        renderModal('info');
+    document.querySelector('.restart').addEventListener('click', restartLevel);
+    document.querySelector('.next-level').addEventListener('click', () => {
+        currentLevel++;
+        startLevel();
     });
     generateUserName();
     renderModal('start-game');
-    renderLevelButtons();
     
     document.getElementById('full-screen-button').addEventListener('click', () => {
         if (!document.fullscreenElement) {
@@ -530,6 +555,6 @@ window.addEventListener('load', () => {
     });
     
     document.body.addEventListener('click', () => music.play(), { once: true });
-    toggleAudioButton.addEventListener('click', toggleAudio);
+    toggleAudioButton.addEventListener('click', toggleAudio)
 });
 

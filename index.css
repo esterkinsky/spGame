@@ -5,10 +5,10 @@
 }
 
 .app {
-    box-sizing: content-box;
     position: relative;
     height: 100vh;
     width: 100vw;
+    padding: 10px;
 }
 
 .overlay-control {
@@ -34,10 +34,6 @@ body {
     text-align: center;
 }
 
-h1 {
-    margin-bottom: 40px;
-}
-
 #game-board {
     display: grid;
     position: relative;
@@ -45,10 +41,34 @@ h1 {
 }
 
 .game {
-    display: none;
+    display: flex;
     width: 100%;
-    justify-content: space-between;
-    align-items: flex-start;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.game > .main {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.game > .game-header {
+    display: flex;
+    width: 100%;
+}
+
+.header-control {
+    display: none;
+}
+
+.game h1 {
+    z-index: 100;
+    margin: 0 auto;
 }
 
 .cell {
@@ -113,7 +133,6 @@ canvas {
 
 .results {
     background-color: #fff;
-    width: 300px;
     height: 300px;
     border-radius: 10px;
     border: 2px solid black;
