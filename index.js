@@ -32,18 +32,18 @@ const STORAGE_KEY = 'gameResults';
 let userName;
 
 const animal1 = new Image();
-animal1.src = '/assets/белка.png';
+animal1.src = './assets/белка.png';
 const animal2 = new Image();
-animal2.src = '/assets/заяц.jpg';
+animal2.src = './assets/заяц.jpg';
 const animal3 = new Image();
-animal3.src = '/assets/дятел.jpg';
+animal3.src = './assets/дятел.jpg';
 
 const house1 = new Image();
-house1.src = '/assets/дупло.jpg';
+house1.src = './assets/дупло.jpg';
 const house2 = new Image();
-house2.src = '/assets/нора.png';
+house2.src = './assets/нора.png';
 const house3 = new Image();
-house3.src = '/assets/гнездо.jpg';
+house3.src = './assets/гнездо.jpg';
 
 function clearGameInfo () {
     time = 0;
