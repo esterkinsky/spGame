@@ -20,6 +20,7 @@ let paths = {};
 let canvas = null;
 let ctx = null;
 let isAudioPlaying = true;
+let isMoving = false;
 let currentLevel = 1;
 let fixedAnimals = {};
 
@@ -206,9 +207,23 @@ function launchFireworks() {
     })();
 }
 
-function endGame() {
+function launchSmallConfetti(x, y) {
+    confetti({
+        particleCount: 20,
+        spread: 20,
+        startVelocity: 10,
+        origin: { x, y }
+    });
+}
+
+async function endGame() {
     clearInterval(timerInterval);
     saveResult(time, movesCount, currentLevel);
+    const colors = Object.keys(paths);
+    isMoving = true;
+    for (const color of colors) {
+        await moveAnimalToHome(color);
+    }
     launchFireworks();
     const isGameEnd = currentLevel === levelCount;
     if (isGameEnd) {
@@ -218,6 +233,7 @@ function endGame() {
     }
     renderAllResults();
     renderModal(isGameEnd ? 'end-game' : 'end-level');
+    isMoving = false;
 }
 
 function checkWin() {
@@ -243,6 +259,7 @@ function createBoard(size) {
 
     board.addEventListener('touchstart', startPath);
     board.addEventListener('touchmove', (e) => {
+        if(isMoving) return;
         const { clientX, clientY } = e.changedTouches[0];
         const el = document.elementFromPoint(clientX,clientY);
         drawPath(el)
@@ -267,9 +284,9 @@ function createBoard(size) {
 
         const animal = fixedAnimals.find(item => item.index === i);
         if (animal) {
-            cell.textContent = animal.value;
             cell.style.color = animal.color;
             cell.addEventListener('mousedown', clearPath);
+            cell.setAttribute('data-animal', animal.isAnimal);
         }
 
         cell.addEventListener('mousedown', startPath);
@@ -289,6 +306,7 @@ function createBoard(size) {
 }
 
 function startPath(e) {
+    if (isMoving) return;
     const cellIndex = parseInt(e.target.getAttribute('data-index'));
     const animal = fixedAnimals.find(({ index }) => index === cellIndex );
 
@@ -314,6 +332,7 @@ function startPath(e) {
 }
 
 function endPath() {
+    if(isMoving) return;
     if (isDrawing) {
         isDrawing = false;
         currentColor = null;
@@ -328,7 +347,7 @@ function clearPath() {
 }
 
 function drawPath(target) {
-    if (!isDrawing) return;
+    if (!isDrawing || isMoving) return;
 
     const cellIndex = parseInt(target.getAttribute('data-index'));
     const preLastPathIndex = paths[currentColor].slice(-2, -1)[0]; 
@@ -375,6 +394,13 @@ function drawPath(target) {
     isPathComplete && checkWin();
 }
 
+function getCenterByIndex(index) {
+    const boardRect = board.getBoundingClientRect();
+    const cell = document.querySelector(`[data-index="${index}"]`).getBoundingClientRect();
+
+    return {x: cell.left + cell.width / 2 - boardRect.left, y: cell.top + cell.height / 2 - boardRect.top};
+}
+
 function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -395,47 +421,31 @@ function redrawCanvas() {
 
 function drawImageInCell(index, image) {
     const imageSize = cellSize - 5;
-    const boardRect = board.getBoundingClientRect();
-    const cell = document.querySelector(`[data-index="${index}"]`).getBoundingClientRect();
+    const {x,y} = getCenterByIndex(index);
 
-    const centerX = cell.left + cell.width / 2 - boardRect.left;
-    const centerY = cell.top + cell.height / 2 - boardRect.top;
-
-    // Рисуем изображение с заданной шириной и высотой
-    ctx.drawImage(image, centerX - imageSize / 2, centerY - imageSize / 2, imageSize, imageSize);
+    ctx.drawImage(image, x - imageSize / 2, y - imageSize / 2, imageSize, imageSize);
 }
 
 // Рисование линии между двумя индексами ячеек
 function drawLine(index1, index2, color) {
-    const boardRect = board.getBoundingClientRect();
-
-    const cell1 = document.querySelector(`[data-index="${index1}"]`).getBoundingClientRect();
-    const cell2 = document.querySelector(`[data-index="${index2}"]`).getBoundingClientRect();
-
-    const startX = cell1.left + cell1.width / 2 - boardRect.left;
-    const startY = cell1.top + cell1.height / 2 - boardRect.top;
-    const endX = cell2.left + cell2.width / 2 - boardRect.left;
-    const endY = cell2.top + cell2.height / 2 - boardRect.top;
+    const {x: x1, y: y1} = getCenterByIndex(index1);
+    const {x: x2, y: y2} = getCenterByIndex(index2);
 
     ctx.strokeStyle = color;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(endX, endY);
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
     ctx.stroke();
 }
 
 function drawCircle(cellIndex, color) {
-    const boardRect = board.getBoundingClientRect();
-    const cell = document.querySelector(`[data-index="${cellIndex}"]`).getBoundingClientRect();
-
-    const centerX = cell.left + cell.width / 2 - boardRect.left;
-    const centerY = cell.top + cell.height / 2 - boardRect.top;
+    const {x, y} = getCenterByIndex(cellIndex);
     const radius = 6;
 
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
     ctx.fill();
 }
 
@@ -469,6 +479,7 @@ function restartLevel() {
         time++;
         updateTimeContent();
     }, 1000);
+    redrawCanvas();
 }
 
 function toggleAudio() {
@@ -515,13 +526,41 @@ function generateLevel () {
     const indexes = shuffle();
 
     return [
-        { index: indexes[0], value: 1, color: 'red', image: animal1 },
-        { index: indexes[1], value: 1, color: 'red', image: house1 },
-        { index: indexes[2], value: 2, color: 'blue', image: animal2 },
-        { index: indexes[3], value: 2, color: 'blue', image: house2 },
-        { index: indexes[4], value: 3, color: 'green', image: animal3 },
-        { index: indexes[5], value: 3, color: 'green', image: house3 }
+        { index: indexes[0], value: 1, color: 'red', image: animal1, isAnimal: true },
+        { index: indexes[1], value: 1, color: 'red', image: house1, isAnimal: false },
+        { index: indexes[2], value: 2, color: 'blue', image: animal2, isAnimal: true, },
+        { index: indexes[3], value: 2, color: 'blue', image: house2, isAnimal: false },
+        { index: indexes[4], value: 3, color: 'green', image: animal3, isAnimal: true },
+        { index: indexes[5], value: 3, color: 'green', image: house3, isAnimal: false },
     ]
+}
+
+function moveAnimalToHome(color) {
+    return new Promise((resolve) => {
+        const index = fixedAnimals.findIndex(el => el.color === color && el.isAnimal);
+        const animal = fixedAnimals[index];
+        
+        const path = paths[color][0] === animal.index ? paths[color] : paths[color].reverse();
+        let i = 0;
+
+        function moveNext() {
+            if (i < path.length) {
+                fixedAnimals[index].index = path[i];
+                redrawCanvas();
+                i++;
+                setTimeout(moveNext, 500);
+                if (i === path.length) {
+                    const { x, y } = document.querySelector(`[data-index="${path[path.length - 1]}"]`).getBoundingClientRect();
+
+                    launchSmallConfetti((x + cellSize / 2) / window.innerWidth, (y + cellSize / 2) / window.innerHeight);
+                };
+            } else {
+                resolve(); // Разрешаем промис, когда движение завершено
+            }
+        }
+
+        moveNext(); // Запускаем движение
+    });
 }
 
 window.addEventListener('load', () => {
