@@ -37,13 +37,25 @@ const animal2 = new Image();
 animal2.src = './assets/hare.jpg';
 const animal3 = new Image();
 animal3.src = './assets/woodpecker.jpg';
+const animal4 = './assets/bobr.jpg';
+animal4.src = new Image();
+const animal5 = './assets/osa.jpg';
+animal5.src = new Image();
+const animal6 = './assets/zhaba.jpg';
+animal6.src = new Image();
 
 const house1 = new Image();
-house1.src = './assets/hollow.jpg';
+house1.src = './assets/nest.jpg';
 const house2 = new Image();
 house2.src = './assets/hole.png';
 const house3 = new Image();
-house3.src = './assets/nest.jpg';
+house3.src = './assets/hollow.jpg';
+const house4 = new Image();
+house4.src = './assets/bobr_dom.jpg';
+const house5 = new Image();
+house5.src = './assets/osa_dom.jpg';
+const house6 = new Image();
+house6.src = './assets/zhaba_dom.jpg';
 
 function clearGameInfo () {
     time = 0;
