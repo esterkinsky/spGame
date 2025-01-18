@@ -1,5 +1,4 @@
 const size = window.innerWidth / 8;
-const cellSize = size > 75 ? 75 : size;
 const endGameDuration = 1500;
 const board = document.getElementById('game-board');
 const modalWindowBlock =  document.getElementById('modal');
@@ -21,7 +20,10 @@ let canvas = null;
 let ctx = null;
 let isAudioPlaying = true;
 let isMoving = false;
-let currentLevel = 1;
+let currentLevel = {
+    level: 1,
+    size: 6,
+};
 let fixedAnimals = {};
 
 const animalCount = 3;
@@ -60,7 +62,14 @@ house6.src = './assets/zhaba_dom.jpg';
 function clearGameInfo () {
     time = 0;
     movesCount = 0;
-    currentLevel = 1;
+    currentLevel = {
+        level: 1,
+        size: 6,
+    };
+}
+
+function getCellSize() {
+    return document.querySelector('.main').getBoundingClientRect().height / (currentLevel.size + 3)
 }
 
 function generateUserName() {
@@ -107,7 +116,7 @@ function updateMoveCounterContent() {
 }
 
 function updateLevelCounterContent() {
-    levelCounterBlock.textContent = `Уровень ${currentLevel}/${levelCount}`;
+    levelCounterBlock.textContent = `Уровень ${currentLevel.level}/${levelCount}`;
 }
 
 function isNeighboringCell(cellIndex1, cellIndex2) {
@@ -230,18 +239,18 @@ function launchSmallConfetti(x, y) {
 
 async function endGame() {
     clearInterval(timerInterval);
-    saveResult(time, movesCount, currentLevel);
+    saveResult(time, movesCount, currentLevel.level);
     const colors = Object.keys(paths);
     isMoving = true;
     for (const color of colors) {
         await moveAnimalToHome(color);
     }
     launchFireworks();
-    const isGameEnd = currentLevel === levelCount;
+    const isGameEnd = currentLevel.level === levelCount;
     if (isGameEnd) {
         document.querySelector('.end-game p').innerHTML = `Вы закончили игру за ${formatTime(time)} и потратили ${movesCount} ходов`
     } else {
-        document.querySelector('.end-level p').innerHTML = `Вы прошли уровень ${currentLevel} из ${levelCount}`
+        document.querySelector('.end-level p').innerHTML = `Вы прошли уровень ${currentLevel.level} из ${levelCount}`
     }
     renderAllResults();
     renderModal(isGameEnd ? 'end-game' : 'end-level');
@@ -265,6 +274,7 @@ function checkWin() {
 }
 
 function createBoard(size) {
+    const cellSize = getCellSize();
     board.innerHTML = ''; 
     board.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
     board.style.gridTemplateRows = `repeat(${size}, ${cellSize}px)`;
@@ -308,7 +318,7 @@ function createBoard(size) {
     }
 
     // Canvas для линий
-    const canvasSize = cellSize * gridSize;
+    const canvasSize = cellSize * size;
     canvas = document.createElement('canvas');
     canvas.width = canvasSize;
     canvas.height = canvasSize;
@@ -432,6 +442,7 @@ function redrawCanvas() {
 }
 
 function drawImageInCell(index, image) {
+    const cellSize = getCellSize();
     const imageSize = cellSize - 5;
     const {x,y} = getCenterByIndex(index);
 
@@ -480,6 +491,8 @@ function startLevel() {
 }
 
 function restartLevel() {
+    if(isMoving) return;
+
     clearInterval(timerInterval);
     movesCount++;
     fixedAnimals = generateLevel();
@@ -549,6 +562,7 @@ function generateLevel () {
 
 function moveAnimalToHome(color) {
     return new Promise((resolve) => {
+        const cellSize = getCellSize();
         const index = fixedAnimals.findIndex(el => el.color === color && el.isAnimal);
         const animal = fixedAnimals[index];
         
@@ -591,7 +605,10 @@ window.addEventListener('load', () => {
     }));    
     document.querySelector('.restart').addEventListener('click', restartLevel);
     document.querySelector('.next-level').addEventListener('click', () => {
-        currentLevel++;
+        currentLevel = {
+            ...currentLevel,
+            level: currentLevel.level++,
+        };
         startLevel();
     });
     generateUserName();
@@ -609,3 +626,7 @@ window.addEventListener('load', () => {
     toggleAudioButton.addEventListener('click', toggleAudio)
 });
 
+window.onresize = () => {
+    createBoard(currentLevel.size);
+    redrawCanvas();
+}

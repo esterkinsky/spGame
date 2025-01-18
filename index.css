@@ -2,6 +2,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-size: 1vw;
 }
 
 .video-container {
@@ -12,14 +13,17 @@
     height: 100%;
     overflow: hidden;
   }
-  .video-container video {
-    width: 100%;
-    min-height: 100%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%);
-  }
+
+.video-container video {
+  width: 100%;
+  min-height: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  object-fit: cover;
+}
+
 .app {
     position: relative;
     height: 100vh;
@@ -41,8 +45,8 @@
 }
 
 .overlay-control > button img {
-    width: 30px;
-    height: 30px;    
+    width: 4vh;
+    height: 4vh;    
 }
 
 body {
@@ -83,6 +87,7 @@ body {
 }
 
 .game h1 {
+    font-size: 2vw;
     z-index: 100;
     margin: 0 auto;
 }
@@ -93,7 +98,6 @@ body {
     background-color: #fff;
     align-items: center;
     justify-content: center;
-    font-size: 30px;
     cursor: pointer;
     border: 1px solid #ddd;
 }
@@ -119,10 +123,6 @@ body {
     transform: scale(0.8);
 }
 
-#modal > button {
-    font-size: 25px;
-}
-
 #modal > div {
     display: flex;
     flex-direction: column;
@@ -137,10 +137,10 @@ canvas {
 }
 
 .button {
-    font-size: 14px;
+    font-size: 1vw;
     cursor: pointer;
-    padding: 12px 10px;
-    border-radius: 10px;
+    padding: 1vw 2vw;
+    border-radius: 1vw;
 }
 
 .button:hover {
