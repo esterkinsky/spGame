@@ -1,10 +1,12 @@
-const cellSize = 75;
-const endGameDuration = 3000;
+const size = window.innerWidth / 8;
+const cellSize = size > 75 ? 75 : size;
+const endGameDuration = 1500;
 const board = document.getElementById('game-board');
 const modalWindowBlock =  document.getElementById('modal');
 const gameBlock = document.querySelector('.game');
 const timerBlock = document.getElementById('timer');
 const moveCounterBlock = document.getElementById('move-counter');
+const levelCounterBlock = document.getElementById('level-counter');
 const toggleAudioButton = document.getElementById('toggle-audio-button');
 const music = document.getElementById('music');
 const musicIcon = document.querySelector('#toggle-audio-button img');
@@ -13,42 +15,79 @@ let time = 0;
 let movesCount = 0;
 let timerInterval = null;
 let isDrawing = false;
-let gridSize = 5;
 let currentColor = '';
 let paths = {};
 let canvas = null;
 let ctx = null;
 let isAudioPlaying = true;
+let isMoving = false;
+let currentLevel = 1;
+let fixedAnimals = {};
 
-const fixedAnimals = [
-    { index: 0, value: 1, color: 'red' },
-    { index: 4, value: 1, color: 'red' },
-    { index: 6, value: 2, color: 'blue' },
-    { index: 10, value: 2, color: 'blue' },
-    { index: 12, value: 3, color: 'green' },
-    { index: 14, value: 3, color: 'green' }
-];
+const animalCount = 3;
+const levelCount = 10;
+const gridSize = 6;
 
 const STORAGE_KEY = 'gameResults';
 let userName;
 
+const animal1 = new Image();
+animal1.src = './assets/squirrel.png';
+const animal2 = new Image();
+animal2.src = './assets/hare.jpg';
+const animal3 = new Image();
+animal3.src = './assets/woodpecker.jpg';
+const animal4 = './assets/bobr.jpg';
+animal4.src = new Image();
+const animal5 = './assets/osa.jpg';
+animal5.src = new Image();
+const animal6 = './assets/zhaba.jpg';
+animal6.src = new Image();
+
+const house1 = new Image();
+house1.src = './assets/nest.jpg';
+const house2 = new Image();
+house2.src = './assets/hole.png';
+const house3 = new Image();
+house3.src = './assets/hollow.jpg';
+const house4 = new Image();
+house4.src = './assets/bobr_dom.jpg';
+const house5 = new Image();
+house5.src = './assets/osa_dom.jpg';
+const house6 = new Image();
+house6.src = './assets/zhaba_dom.jpg';
+
+function clearGameInfo () {
+    time = 0;
+    movesCount = 0;
+    currentLevel = 1;
+}
+
 function generateUserName() {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    const lastId = Object.keys(results).length;
+    const lastId = Object.keys(results).length
     userName = `user${lastId + 1}`;
+    results[userName] = {
+        time: null,
+        moves: null,
+        levels: null,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
 }
 
 function getBestResult(user) {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    return results[user] || { time: Infinity, moves: Infinity };
+    return results[user] || { time: Infinity, moves: Infinity, levels: Infinity };
 }
 
-function saveResult(time, moves) {
+function saveResult(time, moves, levels) {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     const bestResult = getBestResult(userName);
-
-    if (time < bestResult.time) {
-        results[userName] = { time, moves };
+    if (results[userName].levels < levels) {
+        results[userName] = { time, moves, levels };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+    } else if (bestResult.time === null || time < bestResult.time) {
+        results[userName] = { time, moves, levels };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
     }
 }
@@ -65,6 +104,10 @@ function updateTimeContent() {
 
 function updateMoveCounterContent() {
     moveCounterBlock.textContent = `Количество ходов: ${movesCount}`;
+}
+
+function updateLevelCounterContent() {
+    levelCounterBlock.textContent = `Уровень ${currentLevel}/${levelCount}`;
 }
 
 function isNeighboringCell(cellIndex1, cellIndex2) {
@@ -103,7 +146,17 @@ function renderAllResults() {
     const results = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     
     const sortedResults = Object.entries(results).sort(([, a], [, b]) => {
+        // Сначала сортируем по количеству уровней (по убыванию)
+        if (b.levels !== a.levels) {
+            return b.levels - a.levels;
+        }
+        
+        // Затем сортируем по времени (по возрастанию)
+        if (a.time === null && b.time !== null) return 1; // Если у a нет времени, он идет ниже
+        if (b.time === null && a.time !== null) return -1; // Если у b нет времени, он идет ниже
         if (a.time !== b.time) return a.time - b.time;
+    
+        // Наконец, сортируем по количеству ходов (по возрастанию)
         return a.moves - b.moves;
     });
     
@@ -118,11 +171,12 @@ function renderAllResults() {
             <th>Имя</th>
             <th>Время</th>
             <th>Ходы</th>
+            <th>Уровней пройдено</th>
         </tr>
     `;
 
     // Заполняем таблицу результатами
-    sortedResults.forEach(([user, { time, moves }], index) => {
+    sortedResults.forEach(([user, { time, moves, levels }], index) => {
         const row = document.createElement('tr');
         
         // Добавляем класс для выделения текущего пользователя
@@ -133,8 +187,9 @@ function renderAllResults() {
         row.innerHTML = `
             <td>${index + 1}</td>
             <td>${user}</td>
-            <td>${formatTime(time)}</td>
-            <td>${moves}</td>
+            <td>${time ? formatTime(time) : '-'}</td>
+            <td>${moves ? moves : '-'}</td>
+            <td>${levels ? levels : '-'}</td>
         `;
 
         table.appendChild(row);
@@ -164,13 +219,33 @@ function launchFireworks() {
     })();
 }
 
-function endGame() {
+function launchSmallConfetti(x, y) {
+    confetti({
+        particleCount: 20,
+        spread: 20,
+        startVelocity: 10,
+        origin: { x, y }
+    });
+}
+
+async function endGame() {
     clearInterval(timerInterval);
-    saveResult(time, movesCount);
+    saveResult(time, movesCount, currentLevel);
+    const colors = Object.keys(paths);
+    isMoving = true;
+    for (const color of colors) {
+        await moveAnimalToHome(color);
+    }
     launchFireworks();
-    document.querySelector('.end-game p').innerHTML = `Вы закончили игру за ${formatTime(time)} и потратили ${movesCount} ходов`;
+    const isGameEnd = currentLevel === levelCount;
+    if (isGameEnd) {
+        document.querySelector('.end-game p').innerHTML = `Вы закончили игру за ${formatTime(time)} и потратили ${movesCount} ходов`
+    } else {
+        document.querySelector('.end-level p').innerHTML = `Вы прошли уровень ${currentLevel} из ${levelCount}`
+    }
     renderAllResults();
-    renderModal('end-game');
+    renderModal(isGameEnd ? 'end-game' : 'end-level');
+    isMoving = false;
 }
 
 function checkWin() {
@@ -181,10 +256,9 @@ function checkWin() {
         const startCellIndex = path[0];
         const endCellIndex = path[path.length - 1];
 
-        return fixedAnimals.some(animal => 
-            (animal.index === startCellIndex || animal.index === endCellIndex) &&
-            animal.color === color
-        );
+        const filteredFixedAnimals = fixedAnimals.filter(el => el.color === color);
+
+        return filteredFixedAnimals.find(el => el.index === startCellIndex) && filteredFixedAnimals.find(el => el.index === endCellIndex)
     });
 
     isWin && endGame();
@@ -194,6 +268,15 @@ function createBoard(size) {
     board.innerHTML = ''; 
     board.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
     board.style.gridTemplateRows = `repeat(${size}, ${cellSize}px)`;
+
+    board.addEventListener('touchstart', startPath);
+    board.addEventListener('touchmove', (e) => {
+        if(isMoving) return;
+        const { clientX, clientY } = e.changedTouches[0];
+        const el = document.elementFromPoint(clientX,clientY);
+        drawPath(el)
+    })
+    board.addEventListener('touchend', endPath)
 
     // Инициализация возможных путей
     paths = fixedAnimals.reduce((acc, { color }) => {
@@ -213,13 +296,13 @@ function createBoard(size) {
 
         const animal = fixedAnimals.find(item => item.index === i);
         if (animal) {
-            cell.textContent = animal.value;
             cell.style.color = animal.color;
             cell.addEventListener('mousedown', clearPath);
+            cell.setAttribute('data-animal', animal.isAnimal);
         }
 
         cell.addEventListener('mousedown', startPath);
-        cell.addEventListener('mouseenter', drawPath);
+        cell.addEventListener('mouseenter', (e) => drawPath(e.target));
         cell.addEventListener('mouseup', endPath);
         board.appendChild(cell);
     }
@@ -235,6 +318,7 @@ function createBoard(size) {
 }
 
 function startPath(e) {
+    if (isMoving) return;
     const cellIndex = parseInt(e.target.getAttribute('data-index'));
     const animal = fixedAnimals.find(({ index }) => index === cellIndex );
 
@@ -260,6 +344,7 @@ function startPath(e) {
 }
 
 function endPath() {
+    if(isMoving) return;
     if (isDrawing) {
         isDrawing = false;
         currentColor = null;
@@ -273,10 +358,10 @@ function clearPath() {
     }
 }
 
-function drawPath(e) {
-    if (!isDrawing) return;
+function drawPath(target) {
+    if (!isDrawing || isMoving) return;
 
-    const cellIndex = parseInt(e.target.getAttribute('data-index'));
+    const cellIndex = parseInt(target.getAttribute('data-index'));
     const preLastPathIndex = paths[currentColor].slice(-2, -1)[0]; 
 
     // Не рисуем если индекс клетки уже есть в каком-то пути
@@ -321,6 +406,13 @@ function drawPath(e) {
     isPathComplete && checkWin();
 }
 
+function getCenterByIndex(index) {
+    const boardRect = board.getBoundingClientRect();
+    const cell = document.querySelector(`[data-index="${index}"]`).getBoundingClientRect();
+
+    return {x: cell.left + cell.width / 2 - boardRect.left, y: cell.top + cell.height / 2 - boardRect.top};
+}
+
 function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -335,56 +427,71 @@ function redrawCanvas() {
         drawCircle(path[0], color);
         drawCircle(path[path.length - 1], color);
     });
+
+    fixedAnimals.forEach(({index, image}) => drawImageInCell(index, image));
+}
+
+function drawImageInCell(index, image) {
+    const imageSize = cellSize - 5;
+    const {x,y} = getCenterByIndex(index);
+
+    ctx.drawImage(image, x - imageSize / 2, y - imageSize / 2, imageSize, imageSize);
 }
 
 // Рисование линии между двумя индексами ячеек
 function drawLine(index1, index2, color) {
-    const boardRect = board.getBoundingClientRect();
-
-    const cell1 = document.querySelector(`[data-index="${index1}"]`).getBoundingClientRect();
-    const cell2 = document.querySelector(`[data-index="${index2}"]`).getBoundingClientRect();
-
-    const startX = cell1.left + cell1.width / 2 - boardRect.left;
-    const startY = cell1.top + cell1.height / 2 - boardRect.top;
-    const endX = cell2.left + cell2.width / 2 - boardRect.left;
-    const endY = cell2.top + cell2.height / 2 - boardRect.top;
+    const {x: x1, y: y1} = getCenterByIndex(index1);
+    const {x: x2, y: y2} = getCenterByIndex(index2);
 
     ctx.strokeStyle = color;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(endX, endY);
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
     ctx.stroke();
 }
 
 function drawCircle(cellIndex, color) {
-    const boardRect = board.getBoundingClientRect();
-    const cell = document.querySelector(`[data-index="${cellIndex}"]`).getBoundingClientRect();
-
-    const centerX = cell.left + cell.width / 2 - boardRect.left;
-    const centerY = cell.top + cell.height / 2 - boardRect.top;
+    const {x, y} = getCenterByIndex(cellIndex);
     const radius = 6;
 
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
     ctx.fill();
 }
 
-function startGame() {
-    createBoard(gridSize);
-    time = 0;
-    movesCount = 0;
+function startLevel() {
     clearInterval(timerInterval);
+    fixedAnimals = generateLevel();
+    createBoard(gridSize);
     updateTimeContent();
     updateMoveCounterContent();
+    updateLevelCounterContent();    
+    redrawCanvas();
 
-    gameBlock.style.display = 'flex';
+    Object.values(document.querySelectorAll('.header-control')).forEach((coontrol) => coontrol.style.display = 'block');
+
     hideModal();
     timerInterval = setInterval(() => {
         time++;
         updateTimeContent();
     }, 1000);
+}
+
+function restartLevel() {
+    clearInterval(timerInterval);
+    movesCount++;
+    fixedAnimals = generateLevel();
+    createBoard(gridSize);
+    updateTimeContent();
+    updateMoveCounterContent();
+    updateLevelCounterContent();
+    timerInterval = setInterval(() => {
+        time++;
+        updateTimeContent();
+    }, 1000);
+    redrawCanvas();
 }
 
 function toggleAudio() {
@@ -399,15 +506,95 @@ function toggleAudio() {
     }
 }
 
+// функция для генерации индексов
+function shuffle () {
+    const matrix = Array.from({ length: gridSize }, (_, row) => 
+        Array.from({ length: gridSize }, (_, col) => row * gridSize + col)
+    );
+
+    // Извлекаем внутренние элементы
+    const array = [];
+    for (let i = 1; i < gridSize - 1; i++) {
+        for (let j = 1; j < gridSize - 1; j++) {
+            array.push(matrix[i][j]);
+        }
+    }
+
+    var i = 0
+      , j = 0
+      , temp = null
+  
+    for (i = array.length - 1; i > 0; i -= 1) {
+      j = Math.floor(Math.random() * (i + 1))
+      temp = array[i]
+      array[i] = array[j]
+      array[j] = temp
+    }
+
+    return array;
+}
+
+function generateLevel () {
+    const indexes = shuffle();
+
+    return [
+        { index: indexes[0], value: 1, color: 'red', image: animal1, isAnimal: true },
+        { index: indexes[1], value: 1, color: 'red', image: house1, isAnimal: false },
+        { index: indexes[2], value: 2, color: 'blue', image: animal2, isAnimal: true, },
+        { index: indexes[3], value: 2, color: 'blue', image: house2, isAnimal: false },
+        { index: indexes[4], value: 3, color: 'green', image: animal3, isAnimal: true },
+        { index: indexes[5], value: 3, color: 'green', image: house3, isAnimal: false },
+    ]
+}
+
+function moveAnimalToHome(color) {
+    return new Promise((resolve) => {
+        const index = fixedAnimals.findIndex(el => el.color === color && el.isAnimal);
+        const animal = fixedAnimals[index];
+        
+        const path = paths[color][0] === animal.index ? paths[color] : paths[color].reverse();
+        let i = 0;
+
+        function moveNext() {
+            if (i < path.length) {
+                fixedAnimals[index].index = path[i];
+                redrawCanvas();
+                i++;
+                setTimeout(moveNext, 500);
+                if (i === path.length) {
+                    const { x, y } = document.querySelector(`[data-index="${path[path.length - 1]}"]`).getBoundingClientRect();
+
+                    launchSmallConfetti((x + cellSize / 2) / window.innerWidth, (y + cellSize / 2) / window.innerHeight);
+                };
+            } else {
+                resolve(); // Разрешаем промис, когда движение завершено
+            }
+        }
+
+        moveNext(); // Запускаем движение
+    });
+}
+
 window.addEventListener('load', () => {
-    Object.values(document.querySelectorAll('.start')).forEach(button => button.addEventListener('click', startGame));
-    Object.values(document.querySelectorAll('.result-button')).forEach(button => button.addEventListener('click', () => renderModal('info')));
+    Object.values(document.querySelectorAll('.start')).forEach(button => button.addEventListener('click', () => {
+        clearGameInfo();
+        startLevel();
+    }));
+    Object.values(document.querySelectorAll('.result-button')).forEach(button => button.addEventListener('click', () => {
+        renderAllResults();
+        renderModal('info')
+    }));
     Object.values(document.querySelectorAll('.to-main-button')).forEach(button => button.addEventListener('click', () =>{
-        renderModal('start-game')
-        gameBlock.style.display = 'none';
+        Object.values(document.querySelectorAll('.header-control')).forEach((coontrol) => coontrol.style.display = 'none');
+        board.innerHTML = '';
+        renderModal('lobby');
     }));    
+    document.querySelector('.restart').addEventListener('click', restartLevel);
+    document.querySelector('.next-level').addEventListener('click', () => {
+        currentLevel++;
+        startLevel();
+    });
     generateUserName();
-    renderAllResults();
     renderModal('start-game');
     
     document.getElementById('full-screen-button').addEventListener('click', () => {
@@ -419,6 +606,6 @@ window.addEventListener('load', () => {
     });
     
     document.body.addEventListener('click', () => music.play(), { once: true });
-    toggleAudioButton.addEventListener('click', toggleAudio);
+    toggleAudioButton.addEventListener('click', toggleAudio)
 });
 
