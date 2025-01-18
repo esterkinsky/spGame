@@ -22,34 +22,32 @@ let isAudioPlaying = true;
 let isMoving = false;
 let currentLevel = {
     level: 1,
-    size: 6,
+    size: 1,
 };
 let fixedAnimals = {};
 
-const animalCount = 3;
-const levelCount = 10;
-const gridSize = 6;
+const levelCount = 15;
 
 const STORAGE_KEY = 'gameResults';
 let userName;
 
 const animal1 = new Image();
-animal1.src = './assets/belka.png';
+animal1.src = './assets/belka.jpg';
 const animal2 = new Image();
 animal2.src = './assets/lisa.jpg';
 const animal3 = new Image();
 animal3.src = './assets/kit.jpg';
-animal4.src = new Image();
-const animal4 = './assets/bobr.jpg';
-animal5.src = new Image();
-const animal5 = './assets/osa.jpg';
-animal6.src = new Image();
-const animal6 = './assets/zhaba.jpg';
+const animal4 = new Image();
+animal4.src = './assets/bobr.jpg';
+const animal5 = new Image();
+animal5.src = './assets/osa.jpg';
+const animal6 = new Image();
+animal6.src = './assets/zhaba.jpg';
 
 const house1 = new Image();
 house1.src = './assets/belka_dom.jpg';
 const house2 = new Image();
-house2.src = './assets/lisa_dom.png';
+house2.src = './assets/lisa_dom.jpg';
 const house3 = new Image();
 house3.src = './assets/kit_dom.jpg';
 const house4 = new Image();
@@ -120,6 +118,7 @@ function updateLevelCounterContent() {
 }
 
 function isNeighboringCell(cellIndex1, cellIndex2) {
+    const gridSize = currentLevel.size;
     const row1 = Math.floor(cellIndex1 / gridSize);
     const col1 = cellIndex1 % gridSize;
     const row2 = Math.floor(cellIndex2 / gridSize);
@@ -473,9 +472,20 @@ function drawCircle(cellIndex, color) {
 }
 
 function startLevel() {
+    let size;
+    const { level } = currentLevel;
+
+    if(level === 1) size = 4;
+    else if (level <= 4) size = 5;
+    else if (level <= 7) size = 6;
+    else if (level <= 10) size = 9;
+    else size = 10; 
+
+    currentLevel.size = size;
+
     clearInterval(timerInterval);
     fixedAnimals = generateLevel();
-    createBoard(gridSize);
+    createBoard(size);
     updateTimeContent();
     updateMoveCounterContent();
     updateLevelCounterContent();    
@@ -496,7 +506,7 @@ function restartLevel() {
     clearInterval(timerInterval);
     movesCount++;
     fixedAnimals = generateLevel();
-    createBoard(gridSize);
+    createBoard(currentLevel.size);
     updateTimeContent();
     updateMoveCounterContent();
     updateLevelCounterContent();
@@ -520,15 +530,15 @@ function toggleAudio() {
 }
 
 // функция для генерации индексов
-function shuffle () {
-    const matrix = Array.from({ length: gridSize }, (_, row) => 
-        Array.from({ length: gridSize }, (_, col) => row * gridSize + col)
+function shuffle (size) {
+    const matrix = Array.from({ length: size }, (_, row) => 
+        Array.from({ length: size }, (_, col) => row * size + col)
     );
 
     // Извлекаем внутренние элементы
     const array = [];
-    for (let i = 1; i < gridSize - 1; i++) {
-        for (let j = 1; j < gridSize - 1; j++) {
+    for (let i = 1; i < size - 1; i++) {
+        for (let j = 1; j < size - 1; j++) {
             array.push(matrix[i][j]);
         }
     }
@@ -548,15 +558,22 @@ function shuffle () {
 }
 
 function generateLevel () {
-    const indexes = shuffle();
+    const { level, size } = currentLevel;
+    const indexes = shuffle(size);
 
     return [
         { index: indexes[0], value: 1, color: 'red', image: animal1, isAnimal: true },
         { index: indexes[1], value: 1, color: 'red', image: house1, isAnimal: false },
-        { index: indexes[2], value: 2, color: 'blue', image: animal2, isAnimal: true, },
-        { index: indexes[3], value: 2, color: 'blue', image: house2, isAnimal: false },
-        { index: indexes[4], value: 3, color: 'green', image: animal3, isAnimal: true },
-        { index: indexes[5], value: 3, color: 'green', image: house3, isAnimal: false },
+        ...level > 1 ? [ { index: indexes[2], value: 2, color: 'blue', image: animal2, isAnimal: true, } ] : [],
+        ...level > 1 ? [ { index: indexes[3], value: 2, color: 'blue', image: house2, isAnimal: false } ] : [],
+        ...level >= 5 ? [ { index: indexes[4], value: 3, color: 'green', image: animal3, isAnimal: true } ] : [],
+        ...level >= 5 ? [ { index: indexes[5], value: 3, color: 'green', image: house3, isAnimal: false } ] : [],
+        ...level >= 7 ? [ { index: indexes[6], value: 4, color: 'yellow', image: animal4, isAnimal: true } ] : [],
+        ...level >= 7? [ { index: indexes[7], value: 4, color: 'yellow', image: house4, isAnimal: false } ] : [],
+        ...level >= 8 ? [ { index: indexes[8], value: 5, color: 'orange', image: animal5, isAnimal: true } ] : [],
+        ...level >= 8 ? [ { index: indexes[9], value: 5, color: 'orange', image: house5, isAnimal: false } ] : [],
+        ...level > 10 ? [ { index: indexes[10], value: 6, color: 'pink', image: animal6, isAnimal: false } ] : [],
+        ...level > 10 ? [ { index: indexes[11], value: 6, color: 'pink', image: house6, isAnimal: false } ] : [],
     ]
 }
 
@@ -574,7 +591,7 @@ function moveAnimalToHome(color) {
                 fixedAnimals[index].index = path[i];
                 redrawCanvas();
                 i++;
-                setTimeout(moveNext, 500);
+                setTimeout(moveNext, 300);
                 if (i === path.length) {
                     const { x, y } = document.querySelector(`[data-index="${path[path.length - 1]}"]`).getBoundingClientRect();
 
@@ -607,7 +624,7 @@ window.addEventListener('load', () => {
     document.querySelector('.next-level').addEventListener('click', () => {
         currentLevel = {
             ...currentLevel,
-            level: currentLevel.level++,
+            level: currentLevel.level + 1,
         };
         startLevel();
     });
@@ -627,6 +644,7 @@ window.addEventListener('load', () => {
 });
 
 window.onresize = () => {
+    if (!timerInterval) return;
     createBoard(currentLevel.size);
     redrawCanvas();
 }
