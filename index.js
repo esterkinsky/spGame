@@ -1,4 +1,3 @@
-const size = window.innerWidth / 8;
 const endGameDuration = 1500;
 const board = document.getElementById('game-board');
 const modalWindowBlock =  document.getElementById('modal');
@@ -67,7 +66,12 @@ function clearGameInfo () {
 }
 
 function getCellSize() {
-    return document.querySelector('.main').getBoundingClientRect().height / (currentLevel.size + 3)
+    const a = document.querySelector('.main').getBoundingClientRect().height / (currentLevel.size + 3);
+    const b = window.innerWidth / (currentLevel.size + 1);
+    
+    if (a * currentLevel.size > window.innerWidth) return b;
+
+    return a;
 }
 
 function generateUserName() {
@@ -443,7 +447,7 @@ function redrawCanvas() {
 function drawImageInCell(index, image) {
     const cellSize = getCellSize();
     const imageSize = cellSize - 5;
-    const {x,y} = getCenterByIndex(index);
+    const { x, y } = getCenterByIndex(index);
 
     ctx.drawImage(image, x - imageSize / 2, y - imageSize / 2, imageSize, imageSize);
 }
@@ -572,7 +576,7 @@ function generateLevel () {
         ...level >= 7? [ { index: indexes[7], value: 4, color: 'yellow', image: house4, isAnimal: false } ] : [],
         ...level >= 8 ? [ { index: indexes[8], value: 5, color: 'orange', image: animal5, isAnimal: true } ] : [],
         ...level >= 8 ? [ { index: indexes[9], value: 5, color: 'orange', image: house5, isAnimal: false } ] : [],
-        ...level > 10 ? [ { index: indexes[10], value: 6, color: 'pink', image: animal6, isAnimal: false } ] : [],
+        ...level > 10 ? [ { index: indexes[10], value: 6, color: 'pink', image: animal6, isAnimal: true } ] : [],
         ...level > 10 ? [ { index: indexes[11], value: 6, color: 'pink', image: house6, isAnimal: false } ] : [],
     ]
 }
